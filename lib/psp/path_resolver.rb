@@ -28,16 +28,23 @@ module Psp
       end
     end
 
+    def resolve_gems_paths
+      @gems_paths.flat_map do |gem|
+        Dir.glob(File.join(Psp::ROOT_PATH, 'vendor', 'gems', gem, 'spec'))
+      end
+    end
+
     def extract_paths(options)
       return all_specs_paths unless
-        options.key?(:project) || options.key?(:plugins)
+        options.key?(:project) || options.key?(:plugins) || options.key?(:gems)
 
       [Array.wrap(options.fetch :project, Array.new),
-       Array.wrap(options.fetch :plugins, Array.new)]
+       Array.wrap(options.fetch :plugins, Array.new),
+       Array.wrap(options.fetch :gems, Array.new)]
     end
 
     def all_specs_paths
-      [[DEFAULT_PATH_MASK], [DEFAULT_PATH_MASK]]
+      [[DEFAULT_PATH_MASK], [DEFAULT_PATH_MASK], [DEFAULT_PATH_MASK]]
     end
   end # class PathResolver
 end # module Psp
