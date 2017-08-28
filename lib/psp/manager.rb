@@ -11,6 +11,7 @@ module Psp
     # Может быть их стоило вынести в конфиг, а не спрашивать здесь?
     PROJECT_RUNNERS_RATE = ENV.fetch('PROJECT_RUNNERS_RATE', 0.13).to_f
     PLUGINS_RUNNERS_RATE = ENV.fetch('PLUGINS_RUNNERS_RATE', 4.9).to_f
+    GEMS_RUNNERS_RATE = ENV.fetch('GEMS_RUNNERS_RATE', 4.9).to_f
     DEFAULT_CONCURRENCY = 1
 
     attr_reader :concurrency
@@ -19,12 +20,12 @@ module Psp
       @concurrency = options.fetch(:concurrency, DEFAULT_CONCURRENCY)
         .to_i.nonzero? || DEFAULT_CONCURRENCY
 
-      @project, @plugins = separate(collection)
+      @project, @plugins, @gems = separate(collection)
 
       # TODO : Напрашивается 2-а класса проектные раннеры и плагинные
-      @pr_runners_count, @pl_runners_count = calculate_runners_count
-      @pr_runners_alloc, @pl_runners_alloc = Array.new, Array.new
-      @pr_runners_satiety, @pl_runners_satiety = 0, 0
+      @pr_runners_count, @pl_runners_count, @gm_runners_count = calculate_runners_count
+      @pr_runners_alloc, @pl_runners_alloc, @gm_runners_alloc = Array.new, Array.new, Array.new
+      @pr_runners_satiety, @pl_runners_satiety, @gm_runners_satiety = 0, 0, 0
     end
 
     def allocation
@@ -32,7 +33,8 @@ module Psp
       raise RuntimeError, 'Runners are not set' unless runner_classes_defined?
 
       @allocation = calculate_project_runners_allocation +
-                    calculate_plugin_runners_allocation
+                    calculate_plugin_runners_allocation +
+                    calculate_gem_runners_allocation
     end
 
     def project_runner=(klass)
@@ -43,6 +45,10 @@ module Psp
       @pl_runner_klass = klass
     end
 
+    def gem_runner=(klass)
+      @gm_runner_klass = klass
+    end
+
     def print_concurrency
       Ascii.green(@concurrency)
     end
@@ -51,12 +57,14 @@ module Psp
       allocation unless defined?(@allocation)
 
       [print_pr_runners_allocation,
-       print_pl_runners_allocation] * ' + '
+       print_pl_runners_allocation,
+       print_gm_runners_allocation] * ' + '
     end
 
     def print_runners_count
       [Ascii.blue(@pr_runners_count),
-       Ascii.magenta(@pl_runners_count)] * ' + '
+       Ascii.magenta(@pl_runners_count),
+       Ascii.green(@gm_runners_count)] * ' + '
     end
 
     private
@@ -74,12 +82,19 @@ module Psp
       (@pl_runners_alloc.map { |x| Ascii.magenta(x) } + empty) * '/'
     end
 
+    def print_gm_runners_allocation
+      empty = @gm_runners_count.zero? ? [Ascii.green('0')]
+        : print_empty_runners_allocation(@gm_runners_count, @gm_runners_satiety)
+
+      (@gm_runners_alloc.map { |x| Ascii.green(x) } + empty) * '/'
+    end
+
     def print_empty_runners_allocation(total, used)
       ((total - used).nonzero? || 1).times.map { Ascii.red "0" }
     end
 
     def runner_classes_defined?
-      @pr_runner_klass && @pl_runner_klass
+      @pr_runner_klass && @pl_runner_klass && @gm_runner_klass
     end
 
     def calculate_project_runners_allocation
@@ -112,9 +127,31 @@ module Psp
       end
     end
 
+    def calculate_gem_runners_allocation
+      return empty_gem_runners_allocation if @gm_runners_count.zero?
+
+      allocation = @gems.flat_map(&:directory)
+                     .in_groups(@gm_runners_count, false)
+                     .reject(&:empty?)
+
+      allocation.map do |x|
+        @gm_runners_alloc << x.count
+        @gm_runners_satiety += x.count
+
+        [x, @gm_runner_klass]
+      end
+    end
+
     def empty_plugin_runners_allocation
       @pl_runners_alloc = Array.new
       @pl_runners_satiety = 0
+
+      Array.new
+    end
+
+    def empty_gem_runners_allocation
+      @gm_runners_alloc = Array.new
+      @gm_runners_satiety = 0
 
       Array.new
     end
@@ -127,8 +164,15 @@ module Psp
     end
 
     def separate(collection)
-      collection.reduce([[], []]) do |memo, resolver|
-        memo[resolver.project? ? 0 : 1] << resolver
+      collection.reduce([[], [], []]) do |memo, resolver|
+        index = if resolver.project?
+                  0
+                elsif resolver.plugin?
+                  1
+                elsif resolver.gem?
+                  2
+                end
+        memo[index] << resolver
         memo
       end
     end
@@ -137,12 +181,15 @@ module Psp
       if @project.empty?
         [0, @concurrency]
       elsif @plugins.empty?
-        [@concurrency, 0] # TODO : Добавить маленькие очереди и сюда!
+        [@concurrency, 0]
+      elsif @gems.empty?
+        [@concurrency, 0]
       else
         project = (@concurrency * PROJECT_RUNNERS_RATE).ceil
         plugin = (@plugins.count / PLUGINS_RUNNERS_RATE).ceil
+        gem = (@gems.count / GEMS_RUNNERS_RATE).ceil
 
-        [project, plugin]
+        [project, plugin, gem]
       end
     end
   end # class Manager

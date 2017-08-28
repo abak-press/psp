@@ -13,8 +13,9 @@ module Psp
       @dry_run = options.delete(:dry_run)
 
       @manager = Manager.new(collection, options)
-      @manager.plugin_runner = IterativeRunner
       @manager.project_runner = BulkRunner
+      @manager.plugin_runner = IterativeRunner
+      @manager.gem_runner = IterativeRunner
     end
 
     def run

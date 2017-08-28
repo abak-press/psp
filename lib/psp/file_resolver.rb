@@ -19,8 +19,12 @@ module Psp
       @directory.include? File.join('vendor', 'plugins')
     end
 
+    def gem?
+      @directory.include? File.join('vendor', 'gems')
+    end
+
     def project?
-      !plugin?
+      !plugin? && !gem?
     end
 
     def files
@@ -37,6 +41,10 @@ module Psp
 
     def extract_plugin_name(path)
       path.match(/vendor\/plugins\/(?<name>[\w\_\-]+)\/spec$/)[:name]
+    end
+
+    def extract_gem_name(path)
+      path.match(/vendor\/gems\/(?<name>[\w\_\-]+)\/spec$/)[:name]
     end
   end # class FileResolver
 end # module Psp

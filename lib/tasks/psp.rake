@@ -5,6 +5,7 @@ namespace :psp do
   task :all do
     tasks = Psp::PathResolver.new(
       plugins: Psp::PathResolver::DEFAULT_PATH_MASK,
+      gems: Psp::PathResolver::DEFAULT_PATH_MASK,
       project: Psp::PathResolver::DEFAULT_PATH_MASK).expand
 
     succeed = Psp::Runner.
