@@ -3,12 +3,15 @@ module Psp
   class FileResolver
     DEFAULT_PROJECT_NAME = 'project'.freeze
 
-    attr_reader :name, :directory
+    attr_reader :path, :type
 
-    def initialize(path)
+    def initialize(path, type:)
       @path = path
-      @directory = relative_path(path)
-      @name = project? ? DEFAULT_PROJECT_NAME : extract_plugin_name(path)
+      @type = type
+    end
+
+    def directory
+      @directory ||= relative_path(@path)
     end
 
     def size
@@ -16,11 +19,11 @@ module Psp
     end
 
     def plugin?
-      @directory.include? File.join('vendor', 'plugins')
+      @type == :plugin
     end
 
     def project?
-      !plugin?
+      @type == :project
     end
 
     def files
@@ -30,13 +33,10 @@ module Psp
     end
 
     private
+
     def relative_path(full_path)
       Pathname.new(full_path)
         .relative_path_from(Pathname.new ROOT_PATH).to_s
-    end
-
-    def extract_plugin_name(path)
-      path.match(/vendor\/plugins\/(?<name>[\w\_\-]+)\/spec$/)[:name]
     end
   end # class FileResolver
 end # module Psp

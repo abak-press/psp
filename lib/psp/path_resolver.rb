@@ -10,12 +10,15 @@ module Psp
     end
 
     def expand
-      (resolve_project_paths  + resolve_plugins_paths).map do |directory|
-        FileResolver.new(directory)
-      end
+      resolve_project_paths.
+        map { |path| FileResolver.new(path, type: :project) }.
+        concat(
+          resolve_plugins_paths.map { |path| FileResolver.new(path, type: :plugin) }
+        )
     end
 
     private
+
     def resolve_project_paths
       @project_paths.flat_map do |path|
         Dir.glob(File.join(Psp::ROOT_PATH, 'spec'))
@@ -24,7 +27,7 @@ module Psp
 
     def resolve_plugins_paths
       @plugins_paths.flat_map do |plugin|
-        Dir.glob(File.join(Psp::ROOT_PATH, 'vendor', 'plugins', plugin, 'spec'))
+        Dir.glob(File.join(Psp::ROOT_PATH, 'vendor', '{plugins,gems}', plugin, 'spec'))
       end
     end
 

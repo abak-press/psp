@@ -19,9 +19,9 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
 
   # NOTE : Залочили из-за наших проектов
-  spec.add_dependency 'activerecord', '~> 3.1'
-  spec.add_dependency 'activesupport', '~> 3.1'
-  spec.add_dependency 'parallel', '~> 0.9'
+  spec.add_dependency 'activerecord', '>= 3.1'
+  spec.add_dependency 'activesupport', '>= 3.1'
+  spec.add_dependency 'parallel', '>= 0.9'
 
   spec.add_development_dependency 'bundler', '~> 1.6'
   spec.add_development_dependency 'rake'
