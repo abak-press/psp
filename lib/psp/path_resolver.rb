@@ -13,7 +13,11 @@ module Psp
       resolve_project_paths.
         map { |path| FileResolver.new(path, type: :project) }.
         concat(
-          resolve_plugins_paths.map { |path| FileResolver.new(path, type: :plugin) }
+            resolve_gems_paths.map { |path| FileResolver.new(path, type: :project) }
+        ).
+        concat(
+          resolve_plugins_paths.map { |path| FileResolver.new(path, type: :plugins) }.
+            sort_by { |i| -i.size }
         )
     end
 
@@ -27,7 +31,13 @@ module Psp
 
     def resolve_plugins_paths
       @plugins_paths.flat_map do |plugin|
-        Dir.glob(File.join(Psp::ROOT_PATH, 'vendor', '{plugins,gems}', plugin, 'spec'))
+        Dir.glob(File.join(Psp::ROOT_PATH, 'vendor', '{plugins}', plugin, 'spec'))
+      end
+    end
+
+    def resolve_gems_paths
+      @plugins_paths.flat_map do |gem|
+        Dir.glob(File.join(Psp::ROOT_PATH, 'vendor', '{gems}', gem, 'spec'))
       end
     end
 
