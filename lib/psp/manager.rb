@@ -31,8 +31,8 @@ module Psp
       return @allocation if defined?(@allocation)
       raise RuntimeError, 'Runners are not set' unless runner_classes_defined?
 
-      @allocation = calculate_project_runners_allocation +
-                    calculate_plugin_runners_allocation
+      @allocation = calculate_plugin_runners_allocation +
+                    calculate_project_runners_allocation
     end
 
     def project_runner=(klass)
